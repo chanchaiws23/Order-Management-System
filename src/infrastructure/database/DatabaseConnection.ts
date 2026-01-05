@@ -1,8 +1,10 @@
+import { Pool, PoolConfig, QueryResult, QueryResultRow } from 'pg';
+
 export interface DatabaseConfig {
   host: string;
   port: number;
   database: string;
-  username?: string;
+  user?: string;
   password?: string;
   maxPoolSize?: number;
   minPoolSize?: number;
@@ -18,13 +20,11 @@ export interface ConnectionStatus {
 
 export class DatabaseConnection {
   private static instance: DatabaseConnection | null = null;
-  private static readonly lock = Symbol('DatabaseConnectionLock');
-
+  private _pool: Pool | null = null;
   private _isConnected: boolean = false;
   private _connectionTime: Date | null = null;
   private _lastError: string | null = null;
   private _config: DatabaseConfig | null = null;
-  private _poolSize: number = 0;
 
   private constructor() {}
 
@@ -52,17 +52,30 @@ export class DatabaseConnection {
 
     try {
       console.log(
-        `[DatabaseConnection] Connecting to ${config.host}:${config.port}/${config.database}...`
+        `[DatabaseConnection] Connecting to PostgreSQL ${config.host}:${config.port}/${config.database}...`
       );
 
-      await this.simulateConnection(config);
+      const poolConfig: PoolConfig = {
+        host: config.host,
+        port: config.port,
+        database: config.database,
+        user: config.user,
+        password: config.password,
+        max: config.maxPoolSize ?? 10,
+        min: config.minPoolSize ?? 2,
+        connectionTimeoutMillis: config.connectionTimeout ?? 5000,
+        idleTimeoutMillis: 30000,
+      };
+
+      this._pool = new Pool(poolConfig);
+
+      await this._pool.query('SELECT 1');
 
       this._isConnected = true;
       this._connectionTime = new Date();
-      this._poolSize = config.maxPoolSize ?? 10;
       this._lastError = null;
 
-      console.log('[DatabaseConnection] Successfully connected to database');
+      console.log('[DatabaseConnection] Successfully connected to PostgreSQL');
     } catch (error) {
       this._lastError = error instanceof Error ? error.message : 'Unknown error';
       this._isConnected = false;
@@ -71,7 +84,7 @@ export class DatabaseConnection {
   }
 
   async disconnect(): Promise<void> {
-    if (!this._isConnected) {
+    if (!this._isConnected || !this._pool) {
       console.log('[DatabaseConnection] Not connected to database');
       return;
     }
@@ -79,11 +92,11 @@ export class DatabaseConnection {
     try {
       console.log('[DatabaseConnection] Disconnecting from database...');
 
-      await this.simulateDisconnection();
+      await this._pool.end();
 
+      this._pool = null;
       this._isConnected = false;
       this._connectionTime = null;
-      this._poolSize = 0;
 
       console.log('[DatabaseConnection] Successfully disconnected from database');
     } catch (error) {
@@ -92,12 +105,22 @@ export class DatabaseConnection {
     }
   }
 
+  async query<T extends QueryResultRow = any>(text: string, params?: any[]): Promise<QueryResult<T>> {
+    this.ensureConnected();
+    return this._pool!.query<T>(text, params);
+  }
+
+  getPool(): Pool {
+    this.ensureConnected();
+    return this._pool!;
+  }
+
   getStatus(): ConnectionStatus {
     return {
       isConnected: this._isConnected,
       connectionTime: this._connectionTime,
       lastError: this._lastError,
-      poolSize: this._poolSize,
+      poolSize: this._pool?.totalCount ?? 0,
     };
   }
 
@@ -110,42 +133,21 @@ export class DatabaseConnection {
   }
 
   ensureConnected(): void {
-    if (!this._isConnected) {
+    if (!this._isConnected || !this._pool) {
       throw new Error('Database is not connected. Call connect() first.');
     }
   }
 
   async healthCheck(): Promise<boolean> {
-    if (!this._isConnected) {
+    if (!this._isConnected || !this._pool) {
       return false;
     }
 
     try {
-      await this.simulatePing();
+      await this._pool.query('SELECT 1');
       return true;
     } catch {
       return false;
     }
-  }
-
-  private async simulateConnection(config: DatabaseConfig): Promise<void> {
-    const timeout = config.connectionTimeout ?? 5000;
-    await new Promise<void>((resolve, reject) => {
-      setTimeout(() => {
-        if (config.host && config.database) {
-          resolve();
-        } else {
-          reject(new Error('Invalid configuration'));
-        }
-      }, 100);
-    });
-  }
-
-  private async simulateDisconnection(): Promise<void> {
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
-  }
-
-  private async simulatePing(): Promise<void> {
-    await new Promise<void>((resolve) => setTimeout(resolve, 10));
   }
 }
