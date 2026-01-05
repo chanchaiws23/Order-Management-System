@@ -1,4 +1,7 @@
+import 'dotenv/config';
 import express, { Application, Request, Response, NextFunction } from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
 
 import { DatabaseConnection } from './infrastructure/database/DatabaseConnection';
 import { MongoOrderRepository } from './infrastructure/repositories/MongoOrderRepository';
@@ -79,6 +82,8 @@ async function bootstrap(): Promise<Application> {
   console.log('\n[EXPRESS] Setting up Express application...');
   const app: Application = express();
 
+  app.use(helmet());
+  app.use(cors());
   app.use(express.json());
   app.use(express.urlencoded({ extended: true }));
 
