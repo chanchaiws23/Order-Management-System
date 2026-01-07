@@ -1,0 +1,57 @@
+# Deploy to Self-Hosted Server
+# Triggers on push to main branch after CI passes
+# Requires setting up a self-hosted runner on your spare PC
+
+name: Deploy to Production
+
+on:
+  workflow_run:
+    workflows: ["CI/CD Pipeline"]
+    branches: [main]
+    types:
+      - completed
+
+jobs:
+  deploy:
+    name: Deploy to Server
+    runs-on: self-hosted
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: |
+          cat << EOF > .env
+          NODE_ENV=production
+          PORT=3000
+          DB_HOST=db
+          DB_PORT=5432
+          DB_NAME=${{ secrets.DB_NAME }}
+          DB_USER=${{ secrets.DB_USER }}
+          DB_PASSWORD=${{ secrets.DB_PASSWORD }}
+          JWT_ACCESS_SECRET=${{ secrets.JWT_ACCESS_SECRET }}
+          JWT_REFRESH_SECRET=${{ secrets.JWT_REFRESH_SECRET }}
+          CORS_ORIGINS=${{ secrets.CORS_ORIGINS }}
+          EOF
+
+      - name: Build and deploy with Docker Compose
+        run: |
+          docker compose down
+          docker compose up -d --build
+
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for services to start..."
+          sleep 30
+          docker compose ps
+
+      - name: Health check
+        run: |
+          curl -f http://localhost:3000/health || exit 1
+          echo "Health check passed!"
+
+      - name: Cleanup old Docker images
+        run: |
+          docker image prune -f
