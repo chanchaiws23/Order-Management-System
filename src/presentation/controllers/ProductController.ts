@@ -81,7 +81,9 @@ export class ProductController {
           { categoryId: categoryId as string, name: name as string,
             minPrice: minPrice ? parseFloat(minPrice as string) : undefined,
             maxPrice: maxPrice ? parseFloat(maxPrice as string) : undefined,
-            isActive: isActive === 'true', isFeatured: isFeatured === 'true', inStock: inStock === 'true' },
+            isActive: isActive !== undefined ? isActive === 'true' : true,
+            isFeatured: isFeatured === 'true' ? true : undefined,
+            inStock: inStock === 'true' ? true : undefined },
           { page: parseInt(page as string) || 1, limit: parseInt(limit as string) || 10 }
         );
         res.json({ success: true, ...result, data: result.data.map(p => p.toObject()) });
