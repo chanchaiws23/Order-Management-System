@@ -96,11 +96,11 @@ export class PostgresProductRepository implements IProductRepository {
     const limit = pagination?.limit ?? 10;
     const offset = (page - 1) * limit;
 
-    const countResult = await this.db.query<{ count: string }>('SELECT COUNT(*) FROM products');
+    const countResult = await this.db.query<{ count: string }>('SELECT COUNT(*) FROM products WHERE is_active = true');
     const total = parseInt(countResult.rows[0].count, 10);
 
     const result = await this.db.query<ProductRow>(
-      'SELECT * FROM products ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]
+      'SELECT * FROM products WHERE is_active = true ORDER BY created_at DESC LIMIT $1 OFFSET $2', [limit, offset]
     );
 
     return { data: result.rows.map(row => this.toDomain(row)), total, page, limit, totalPages: Math.ceil(total / limit) };
