@@ -72,15 +72,28 @@ async function bootstrap(): Promise<Application> {
 
   console.log('\n[1/7] Initializing Database Connection (Singleton)...');
   const dbConnection = DatabaseConnection.getInstance();
-  await dbConnection.connect({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '2302', 10),
-    database: process.env.DB_NAME || 'order_management',
-    user: process.env.DB_USER || 'postgres',
-    password: process.env.DB_PASSWORD || 'postgres',
-    maxPoolSize: 10,
-    minPoolSize: 2,
-  });
+  
+  // Support DATABASE_URL (Railway, Heroku, etc.) or individual env vars
+  const databaseUrl = process.env.DATABASE_URL;
+  
+  await dbConnection.connect(
+    databaseUrl
+      ? {
+          connectionString: databaseUrl,
+          ssl: process.env.NODE_ENV === 'production',
+          maxPoolSize: 10,
+          minPoolSize: 2,
+        }
+      : {
+          host: process.env.DB_HOST || 'localhost',
+          port: parseInt(process.env.DB_PORT || '5432', 10),
+          database: process.env.DB_NAME || 'order_management',
+          user: process.env.DB_USER || 'postgres',
+          password: process.env.DB_PASSWORD || 'postgres',
+          maxPoolSize: 10,
+          minPoolSize: 2,
+        }
+  );
 
   console.log('\n[2/10] Creating Repositories (Repository Pattern)...');
   const orderRepository = new PostgresOrderRepository(dbConnection);

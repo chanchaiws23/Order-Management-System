@@ -1,14 +1,16 @@
 import { Pool, PoolConfig, QueryResult, QueryResultRow } from 'pg';
 
 export interface DatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
+  host?: string;
+  port?: number;
+  database?: string;
   user?: string;
   password?: string;
   maxPoolSize?: number;
   minPoolSize?: number;
   connectionTimeout?: number;
+  connectionString?: string;
+  ssl?: boolean;
 }
 
 export interface ConnectionStatus {
@@ -51,21 +53,34 @@ export class DatabaseConnection {
     this._config = config;
 
     try {
-      console.log(
-        `[DatabaseConnection] Connecting to PostgreSQL ${config.host}:${config.port}/${config.database}...`
-      );
+      let poolConfig: PoolConfig;
 
-      const poolConfig: PoolConfig = {
-        host: config.host,
-        port: config.port,
-        database: config.database,
-        user: config.user,
-        password: config.password,
-        max: config.maxPoolSize ?? 10,
-        min: config.minPoolSize ?? 2,
-        connectionTimeoutMillis: config.connectionTimeout ?? 5000,
-        idleTimeoutMillis: 30000,
-      };
+      if (config.connectionString) {
+        console.log('[DatabaseConnection] Connecting to PostgreSQL via connection string...');
+        poolConfig = {
+          connectionString: config.connectionString,
+          max: config.maxPoolSize ?? 10,
+          min: config.minPoolSize ?? 2,
+          connectionTimeoutMillis: config.connectionTimeout ?? 5000,
+          idleTimeoutMillis: 30000,
+          ssl: config.ssl !== false ? { rejectUnauthorized: false } : undefined,
+        };
+      } else {
+        console.log(
+          `[DatabaseConnection] Connecting to PostgreSQL ${config.host}:${config.port}/${config.database}...`
+        );
+        poolConfig = {
+          host: config.host,
+          port: config.port,
+          database: config.database,
+          user: config.user,
+          password: config.password,
+          max: config.maxPoolSize ?? 10,
+          min: config.minPoolSize ?? 2,
+          connectionTimeoutMillis: config.connectionTimeout ?? 5000,
+          idleTimeoutMillis: 30000,
+        };
+      }
 
       this._pool = new Pool(poolConfig);
 
