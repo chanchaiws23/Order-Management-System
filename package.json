@@ -8,7 +8,7 @@
     "start": "node dist/app.js",
     "dev": "ts-node src/app.ts",
     "dev:watch": "ts-node-dev --respawn src/app.ts",
-    "lint": "eslint src/**/*.ts",
+    "typecheck": "tsc --noEmit",
     "test": "jest",
     "test:unit": "jest tests/domain tests/application tests/infrastructure/security",
     "test:integration": "jest tests/integration",
