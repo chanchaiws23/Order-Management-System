@@ -73,6 +73,29 @@ export class ProductController {
     }
   );
 
+  getAllProducts = LogExecutionTime()(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 10;
+        const result = await this.productUseCases.getAllProducts({ page, limit });
+        res.json({ 
+          success: true, 
+          data: result.data.map(p => p.toObject()),
+          pagination: {
+            page: result.page,
+            limit: result.limit,
+            total: result.total,
+            totalPages: result.totalPages
+          }
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        res.status(500).json({ success: false, error: message });
+      }
+    }
+  );
+
   searchProducts = LogExecutionTime()(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
       try {

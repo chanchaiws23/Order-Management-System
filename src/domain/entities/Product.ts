@@ -222,6 +222,8 @@ export class Product {
     if (data.price !== undefined) this._price = data.price;
     if (data.compareAtPrice !== undefined) this._compareAtPrice = data.compareAtPrice;
     if (data.costPrice !== undefined) this._costPrice = data.costPrice;
+    if (data.stockQuantity !== undefined) this._stockQuantity = data.stockQuantity;
+    if (data.lowStockThreshold !== undefined) this._lowStockThreshold = data.lowStockThreshold;
     if (data.weight !== undefined) this._weight = data.weight;
     if (data.width !== undefined) this._width = data.width;
     if (data.height !== undefined) this._height = data.height;

@@ -55,6 +55,7 @@ export function createRoutes(
 
   // Products (public read, admin write)
   router.post('/products', auth, adminOnly, controllers.product.createProduct);
+  router.get('/products/all', auth, staffUp, controllers.product.getAllProducts);
   router.get('/products', controllers.product.searchProducts);
   router.get('/products/featured', controllers.product.getFeaturedProducts);
   router.get('/products/:id', controllers.product.getProduct);

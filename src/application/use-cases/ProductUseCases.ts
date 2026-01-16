@@ -110,6 +110,10 @@ export class ProductUseCases {
     await this.productRepo.delete(id);
   }
 
+  async getAllProducts(pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
+    return this.productRepo.findAll(pagination);
+  }
+
   async searchProducts(criteria: ProductSearchCriteria, pagination?: PaginationOptions): Promise<PaginatedResult<Product>> {
     return this.productRepo.search(criteria, pagination);
   }
