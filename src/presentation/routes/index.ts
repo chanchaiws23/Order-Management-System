@@ -75,6 +75,7 @@ export function createRoutes(
   router.get('/coupons', auth, staffUp, controllers.coupon.getAllCoupons);
   router.get('/coupons/active', controllers.coupon.getActiveCoupons);
   router.post('/coupons/validate', auth, controllers.coupon.validateCoupon);
+  router.get('/coupons/code/:code', controllers.coupon.getCouponByCode);
   router.get('/coupons/:id', auth, staffUp, controllers.coupon.getCoupon);
   router.put('/coupons/:id', auth, adminOnly, controllers.coupon.updateCoupon);
   router.delete('/coupons/:id', auth, adminOnly, controllers.coupon.deleteCoupon);

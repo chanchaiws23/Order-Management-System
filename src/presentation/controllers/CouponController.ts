@@ -33,6 +33,23 @@ export class CouponController {
     }
   );
 
+  getCouponByCode = LogExecutionTime()(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      try {
+        const { code } = req.params;
+        const coupon = await this.couponUseCases.getCouponByCode(code);
+        if (!coupon) {
+          res.status(404).json({ success: false, error: 'Coupon not found' });
+          return;
+        }
+        res.json({ success: true, data: coupon.toObject() });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Internal server error';
+        res.status(500).json({ success: false, error: message });
+      }
+    }
+  );
+
   validateCoupon = LogExecutionTime()(
     async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
       try {
