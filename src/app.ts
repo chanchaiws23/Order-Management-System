@@ -34,12 +34,14 @@ import { InputValidator } from './infrastructure/security/InputValidator';
 // Application - Use Cases
 import { PaymentFactory } from './application/factories/PaymentFactory';
 import { CreateOrderUseCase } from './application/use-cases/CreateOrderUseCase';
+import { OrderQueryUseCases } from './application/use-cases/OrderQueryUseCases';
 import { CustomerUseCases } from './application/use-cases/CustomerUseCases';
 import { ProductUseCases } from './application/use-cases/ProductUseCases';
 import { CouponUseCases } from './application/use-cases/CouponUseCases';
 import { ReviewUseCases } from './application/use-cases/ReviewUseCases';
 import { PaymentUseCases } from './application/use-cases/PaymentUseCases';
 import { AuthUseCases } from './application/use-cases/AuthUseCases';
+import { UserUseCases } from './application/use-cases/UserUseCases';
 
 // Presentation - Controllers
 import { OrderController } from './presentation/controllers/OrderController';
@@ -49,6 +51,7 @@ import { CouponController } from './presentation/controllers/CouponController';
 import { ReviewController } from './presentation/controllers/ReviewController';
 import { PaymentController } from './presentation/controllers/PaymentController';
 import { AuthController } from './presentation/controllers/AuthController';
+import { UserController } from './presentation/controllers/UserController';
 import { createRoutes } from './presentation/routes';
 import { createAuthRoutes } from './presentation/routes/authRoutes';
 
@@ -154,21 +157,24 @@ async function bootstrap(): Promise<Application> {
   const createOrderUseCase = new CreateOrderUseCase(
     orderRepository, paymentFactory, notificationService, eventPublisher, idGenerator
   );
+  const orderQueryUseCases = new OrderQueryUseCases(orderRepository);
   const customerUseCases = new CustomerUseCases(customerRepository, addressRepository, idGenerator);
   const productUseCases = new ProductUseCases(productRepository, categoryRepository, idGenerator);
   const couponUseCases = new CouponUseCases(couponRepository, idGenerator);
   const reviewUseCases = new ReviewUseCases(reviewRepository, productRepository, orderRepository, idGenerator);
   const paymentUseCases = new PaymentUseCases(paymentRepository, orderRepository, idGenerator);
   const authUseCases = new AuthUseCases(userRepository, auditLogRepository, passwordHasher, jwtService, idGenerator);
+  const userUseCases = new UserUseCases(userRepository, auditLogRepository, passwordHasher, idGenerator);
 
   console.log('\n[9/10] Creating Controllers (Presentation Layer)...');
-  const orderController = new OrderController(createOrderUseCase);
+  const orderController = new OrderController(createOrderUseCase, orderQueryUseCases);
   const customerController = new CustomerController(customerUseCases);
   const productController = new ProductController(productUseCases);
   const couponController = new CouponController(couponUseCases);
   const reviewController = new ReviewController(reviewUseCases);
   const paymentController = new PaymentController(paymentUseCases);
   const authController = new AuthController(authUseCases);
+  const userController = new UserController(userUseCases);
 
   console.log('\n[10/10] Setting up Express application with security middleware...');
   const app: Application = express();
@@ -226,6 +232,7 @@ async function bootstrap(): Promise<Application> {
       coupon: couponController,
       review: reviewController,
       payment: paymentController,
+      user: userController,
     },
     {
       auth: authMiddleware,
@@ -283,6 +290,7 @@ async function main(): Promise<void> {
       console.log(`   Coupons:    CRUD /api/coupons (admin only)`);
       console.log(`   Reviews:    CRUD /api/reviews (approval workflow)`);
       console.log(`   Payments:   CRUD /api/payments (staff+ only)`);
+      console.log(`   Users:      CRUD /api/users (admin only)`);
     });
 
     process.on('SIGTERM', async () => {

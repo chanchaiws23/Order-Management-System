@@ -5,6 +5,7 @@ import { ProductController } from '../controllers/ProductController';
 import { CouponController } from '../controllers/CouponController';
 import { ReviewController } from '../controllers/ReviewController';
 import { PaymentController } from '../controllers/PaymentController';
+import { UserController } from '../controllers/UserController';
 import { Role } from '../../domain/value-objects/Role';
 
 export interface RouteMiddleware {
@@ -23,6 +24,7 @@ export function createRoutes(
     coupon: CouponController;
     review: ReviewController;
     payment: PaymentController;
+    user: UserController;
   },
   middleware?: RouteMiddleware
 ): Router {
@@ -35,6 +37,10 @@ export function createRoutes(
 
   // Orders (auth required for creating)
   router.post('/orders', auth, controllers.order.createOrder);
+  router.get('/orders/recent', auth, staffUp, controllers.order.getRecentOrders);
+  router.get('/orders/stats', auth, adminOnly, controllers.order.getOrderStats);
+  router.get('/orders/:id', auth, controllers.order.getOrderById);
+  router.get('/customers/:customerId/orders', auth, controllers.order.getCustomerOrders);
 
   // Customers (admin/staff for management, auth for own profile)
   router.post('/customers', controllers.customer.createCustomer);
@@ -95,6 +101,15 @@ export function createRoutes(
   router.patch('/payments/:id/failed', auth, staffUp, controllers.payment.markFailed);
   router.patch('/payments/:id/refund', auth, adminOnly, controllers.payment.refund);
   router.get('/orders/:orderId/payments', auth, controllers.payment.getOrderPayments);
+
+  // Users (admin only)
+  router.get('/users', auth, adminOnly, controllers.user.getAllUsers);
+  router.get('/users/search', auth, adminOnly, controllers.user.searchUsers);
+  router.get('/users/stats', auth, adminOnly, controllers.user.getUserStats);
+  router.get('/users/:id', auth, adminOnly, controllers.user.getUserById);
+  router.post('/users', auth, adminOnly, controllers.user.createUser);
+  router.put('/users/:id', auth, adminOnly, controllers.user.updateUser);
+  router.delete('/users/:id', auth, adminOnly, controllers.user.deleteUser);
 
   return router;
 }
