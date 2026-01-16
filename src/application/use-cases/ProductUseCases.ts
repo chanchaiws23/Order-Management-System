@@ -85,12 +85,22 @@ export class ProductUseCases {
     return product;
   }
 
-  async updateProduct(id: string, dto: Partial<CreateProductDTO>): Promise<Product> {
+  async updateProduct(id: string, dto: Partial<CreateProductDTO & { isActive?: boolean }>): Promise<Product> {
     const product = await this.productRepo.findById(id);
     if (!product) {
       throw new Error('Product not found');
     }
 
+    // Handle isActive separately
+    if (dto.isActive !== undefined) {
+      if (dto.isActive) {
+        product.activate();
+      } else {
+        product.deactivate();
+      }
+    }
+
+    // Update other fields
     product.updateDetails(dto);
     await this.productRepo.save(product);
     return product;
