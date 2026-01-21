@@ -35,6 +35,7 @@ import { InputValidator } from './infrastructure/security/InputValidator';
 import { PaymentFactory } from './application/factories/PaymentFactory';
 import { CreateOrderUseCase } from './application/use-cases/CreateOrderUseCase';
 import { OrderQueryUseCases } from './application/use-cases/OrderQueryUseCases';
+import { OrderManagementUseCases } from './application/use-cases/OrderManagementUseCases';
 import { CustomerUseCases } from './application/use-cases/CustomerUseCases';
 import { ProductUseCases } from './application/use-cases/ProductUseCases';
 import { CouponUseCases } from './application/use-cases/CouponUseCases';
@@ -42,6 +43,7 @@ import { ReviewUseCases } from './application/use-cases/ReviewUseCases';
 import { PaymentUseCases } from './application/use-cases/PaymentUseCases';
 import { AuthUseCases } from './application/use-cases/AuthUseCases';
 import { UserUseCases } from './application/use-cases/UserUseCases';
+import { AdminDashboardUseCases } from './application/use-cases/AdminDashboardUseCases';
 
 // Presentation - Controllers
 import { OrderController } from './presentation/controllers/OrderController';
@@ -52,6 +54,7 @@ import { ReviewController } from './presentation/controllers/ReviewController';
 import { PaymentController } from './presentation/controllers/PaymentController';
 import { AuthController } from './presentation/controllers/AuthController';
 import { UserController } from './presentation/controllers/UserController';
+import { AdminController } from './presentation/controllers/AdminController';
 import { createRoutes } from './presentation/routes';
 import { createAuthRoutes } from './presentation/routes/authRoutes';
 
@@ -158,6 +161,7 @@ async function bootstrap(): Promise<Application> {
     orderRepository, paymentFactory, notificationService, eventPublisher, idGenerator
   );
   const orderQueryUseCases = new OrderQueryUseCases(orderRepository);
+  const orderManagementUseCases = new OrderManagementUseCases(orderRepository);
   const customerUseCases = new CustomerUseCases(customerRepository, addressRepository, idGenerator);
   const productUseCases = new ProductUseCases(productRepository, categoryRepository, idGenerator);
   const couponUseCases = new CouponUseCases(couponRepository, idGenerator);
@@ -165,9 +169,10 @@ async function bootstrap(): Promise<Application> {
   const paymentUseCases = new PaymentUseCases(paymentRepository, orderRepository, idGenerator);
   const authUseCases = new AuthUseCases(userRepository, auditLogRepository, passwordHasher, jwtService, idGenerator);
   const userUseCases = new UserUseCases(userRepository, auditLogRepository, passwordHasher, idGenerator);
+  const adminDashboardUseCases = new AdminDashboardUseCases(orderRepository, productRepository, customerRepository);
 
   console.log('\n[9/10] Creating Controllers (Presentation Layer)...');
-  const orderController = new OrderController(createOrderUseCase, orderQueryUseCases);
+  const orderController = new OrderController(createOrderUseCase, orderQueryUseCases, orderManagementUseCases);
   const customerController = new CustomerController(customerUseCases);
   const productController = new ProductController(productUseCases);
   const couponController = new CouponController(couponUseCases);
@@ -175,6 +180,7 @@ async function bootstrap(): Promise<Application> {
   const paymentController = new PaymentController(paymentUseCases);
   const authController = new AuthController(authUseCases);
   const userController = new UserController(userUseCases);
+  const adminController = new AdminController(adminDashboardUseCases);
 
   console.log('\n[10/10] Setting up Express application with security middleware...');
   const app: Application = express();
@@ -233,6 +239,7 @@ async function bootstrap(): Promise<Application> {
       review: reviewController,
       payment: paymentController,
       user: userController,
+      admin: adminController,
     },
     {
       auth: authMiddleware,

@@ -6,6 +6,7 @@ import { CouponController } from '../controllers/CouponController';
 import { ReviewController } from '../controllers/ReviewController';
 import { PaymentController } from '../controllers/PaymentController';
 import { UserController } from '../controllers/UserController';
+import { AdminController } from '../controllers/AdminController';
 import { Role } from '../../domain/value-objects/Role';
 
 export interface RouteMiddleware {
@@ -25,6 +26,7 @@ export function createRoutes(
     review: ReviewController;
     payment: PaymentController;
     user: UserController;
+    admin: AdminController;
   },
   middleware?: RouteMiddleware
 ): Router {
@@ -37,9 +39,12 @@ export function createRoutes(
 
   // Orders (auth required for creating)
   router.post('/orders', auth, controllers.order.createOrder);
+  router.get('/orders', auth, staffUp, controllers.order.getAllOrders);
   router.get('/orders/recent', auth, staffUp, controllers.order.getRecentOrders);
   router.get('/orders/stats', auth, adminOnly, controllers.order.getOrderStats);
   router.get('/orders/:id', auth, controllers.order.getOrderById);
+  router.patch('/orders/:id/status', auth, staffUp, controllers.order.updateOrderStatus);
+  router.patch('/orders/:id/cancel', auth, controllers.order.cancelOrder);
   router.get('/customers/:customerId/orders', auth, controllers.order.getCustomerOrders);
 
   // Customers (admin/staff for management, auth for own profile)
@@ -112,6 +117,9 @@ export function createRoutes(
   router.post('/users', auth, adminOnly, controllers.user.createUser);
   router.put('/users/:id', auth, adminOnly, controllers.user.updateUser);
   router.delete('/users/:id', auth, adminOnly, controllers.user.deleteUser);
+
+  // Admin Dashboard (admin only)
+  router.get('/admin/dashboard/stats', auth, adminOnly, controllers.admin.getDashboardStats);
 
   return router;
 }

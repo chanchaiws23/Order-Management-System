@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import { CreateOrderUseCase } from '../../application/use-cases/CreateOrderUseCase';
 import { OrderQueryUseCases } from '../../application/use-cases/OrderQueryUseCases';
+import { OrderManagementUseCases } from '../../application/use-cases/OrderManagementUseCases';
 import { CreateOrderDTO } from '../../application/dtos/CreateOrderDTO';
+import { OrderStatus } from '../../domain/value-objects/OrderStatus';
 import {
   LogExecutionTime,
   ExecutionTimeDecorator,
@@ -12,7 +14,8 @@ export class OrderController {
 
   constructor(
     private readonly createOrderUseCase: CreateOrderUseCase,
-    private readonly orderQueryUseCases: OrderQueryUseCases
+    private readonly orderQueryUseCases: OrderQueryUseCases,
+    private readonly orderManagementUseCases: OrderManagementUseCases
   ) {
     const decorator = new ExecutionTimeDecorator(this.createOrderUseCase);
     this.createOrderWithLogging = decorator.wrap('execute', 'CreateOrderUseCase.execute');
@@ -137,6 +140,92 @@ export class OrderController {
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Failed to get customer orders';
         res.status(500).json({ success: false, error: message });
+      }
+    }
+  );
+
+  getAllOrders = LogExecutionTime()(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      try {
+        const page = parseInt(req.query.page as string) || 1;
+        const limit = parseInt(req.query.limit as string) || 20;
+        const result = await this.orderManagementUseCases.getAllOrders({ page, limit });
+
+        res.json({
+          success: true,
+          data: result.data.map(order => ({
+            id: order.id,
+            customerId: order.customerId,
+            status: order.status,
+            totalAmount: order.calculateTotal().amount,
+            currency: order.currency,
+            itemCount: order.calculateItemCount(),
+            createdAt: order.createdAt.toISOString(),
+            updatedAt: order.updatedAt.toISOString(),
+          })),
+          pagination: {
+            page: result.page,
+            limit: result.limit,
+            total: result.total,
+            totalPages: result.totalPages,
+          },
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to get orders';
+        res.status(500).json({ success: false, error: message });
+      }
+    }
+  );
+
+  updateOrderStatus = LogExecutionTime()(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      try {
+        const { id } = req.params;
+        const { status } = req.body;
+
+        if (!status || !Object.values(OrderStatus).includes(status)) {
+          res.status(400).json({ success: false, error: 'Invalid status' });
+          return;
+        }
+
+        const order = await this.orderManagementUseCases.updateOrderStatus(id, status);
+
+        res.json({
+          success: true,
+          data: {
+            id: order.id,
+            status: order.status,
+            updatedAt: order.updatedAt.toISOString(),
+          },
+          message: 'Order status updated successfully',
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to update order status';
+        res.status(400).json({ success: false, error: message });
+      }
+    }
+  );
+
+  cancelOrder = LogExecutionTime()(
+    async (req: Request, res: Response, _next: NextFunction): Promise<void> => {
+      try {
+        const { id } = req.params;
+        const { reason } = req.body;
+
+        const order = await this.orderManagementUseCases.cancelOrder(id, reason);
+
+        res.json({
+          success: true,
+          data: {
+            id: order.id,
+            status: order.status,
+            updatedAt: order.updatedAt.toISOString(),
+          },
+          message: 'Order cancelled successfully',
+        });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Failed to cancel order';
+        res.status(400).json({ success: false, error: message });
       }
     }
   );
